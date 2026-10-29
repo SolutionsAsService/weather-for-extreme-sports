@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outrider — Find your weather window</title>
+<meta name="description" content="Hour-by-hour go, marginal and no-go windows for mountain biking, climbing, paragliding, kiting, paddling and trail running, from live Open-Meteo forecasts.">
+<meta name="theme-color" content="#0B1117">
+<meta property="og:title" content="Outrider — Find your weather window">
+<meta property="og:description" content="48 hours, six sports, every hour graded go, marginal or no-go.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://api.open-meteo.com">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#windows">Skip to the window finder</a>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="index.html" aria-label="Outrider, home">
+      <img src="favicon.svg" alt="" width="30" height="30">
+      <span>OUTRIDER</span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#windows">Windows</a>
+      <a href="#charts">48 hours</a>
+      <a href="#week">Week</a>
+      <a href="#method">Method</a>
+    </nav>
+    <div class="top-tools">
+      <button class="chip" id="unit" type="button" aria-pressed="false" title="Switch units">°F · mph</button>
+      <button class="chip chip-icon" id="refresh" type="button" aria-label="Refresh forecast">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ================= HERO ================= -->
+  <section class="hero" aria-labelledby="hero-title">
+    <svg class="topo" id="topo" aria-hidden="true" focusable="false"></svg>
+    <div class="hero-in">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live" aria-hidden="true"></span> <span id="status">Live forecast</span> &middot; Open-Meteo</p>
+        <h1 id="hero-title">Find your <em>window.</em></h1>
+        <p class="lede">Forty-eight hours, six sports, every hour graded <b class="g">go</b>, <b class="m">marginal</b> or <b class="n">no-go</b>. Pick a place. We&rsquo;ll find the hours worth leaving for.</p>
+
+        <form class="search" id="search" role="search">
+          <label class="search-field">
+            <span class="sr-only">Place</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 10.2c0 5.1-8 11.3-8 11.3S4 15.3 4 10.2a8 8 0 1 1 16 0Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <input id="q" name="q" type="text" autocomplete="off" spellcheck="false" placeholder="Town, crag, beach or trailhead" value="Moab">
+          </label>
+          <button class="btn btn-go" type="submit">Find windows</button>
+          <button class="btn btn-ghost" id="locate" type="button" title="Use my location">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="sr-only">Use my location</span>
+          </button>
+        </form>
+        <p class="err" id="err" role="alert"></p>
+        <a class="next" id="next" href="#windows"><span>Next window</span> <b>&hellip;</b></a>
+        <div class="spots" aria-label="Popular spots">
+          <button type="button" data-q="Moab">Moab</button>
+          <button type="button" data-q="Squamish">Squamish</button>
+          <button type="button" data-q="Hood River">Hood River</button>
+          <button type="button" data-q="Chamonix">Chamonix</button>
+          <button type="button" data-q="Taos">Taos</button>
+          <button type="button" data-q="Haleiwa">North Shore</button>
+          <button type="button" data-q="Interlaken">Interlaken</button>
+        </div>
+      </div>
+
+      <article class="now" aria-labelledby="now-place" aria-busy="true" id="now">
+        <header class="now-head">
+          <div>
+            <p class="kicker">Now at</p>
+            <h2 id="now-place">Loading&hellip;</h2>
+            <p class="now-meta" id="now-meta">&nbsp;</p>
+          </div>
+          <div class="now-icon" id="now-icon" aria-hidden="true"></div>
+        </header>
+        <div class="now-main">
+          <p class="temp"><span id="t">--</span><sup id="t-unit">°F</sup></p>
+          <div class="now-cond">
+            <p id="cond">&nbsp;</p>
+            <p class="dim">Feels <b id="feels">--</b> &middot; H <b id="hi">--</b> &middot; L <b id="lo">--</b></p>
+          </div>
+        </div>
+        <div class="now-grid">
+          <figure class="dial" aria-labelledby="dial-cap">
+            <svg viewBox="0 0 120 120" id="dial" aria-hidden="true"></svg>
+            <figcaption id="dial-cap"><b id="wind">--</b> <span id="wind-u">mph</span><small id="wind-dir">wind</small></figcaption>
+          </figure>
+          <dl class="readouts">
+            <div><dt>Gusts</dt><dd id="gust">--</dd></div>
+            <div><dt>Rain chance</dt><dd id="pop">--</dd></div>
+            <div><dt>Humidity</dt><dd id="rh">--</dd></div>
+            <div><dt>UV</dt><dd id="uv">--</dd></div>
+            <div><dt>Visibility</dt><dd id="vis">--</dd></div>
+            <div><dt>Cloud</dt><dd id="cloud">--</dd></div>
+          </dl>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ================= WINDOW FINDER ================= -->
+  <section id="windows" class="windows" aria-labelledby="win-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The window finder</p>
+        <h2 id="win-title">Every hour, <em>every sport.</em></h2>
+        <p class="sec-lede">Rows are sports, columns are the next 48 hours. Tap a row to see its best window and its limits on the charts.</p>
+      </div>
+
+      <div class="best" id="best" aria-live="polite">
+        <div class="best-sport">
+          <p class="kicker">Best window for</p>
+          <p class="best-name" id="best-name">&nbsp;</p>
+        </div>
+        <div class="best-when">
+          <p class="best-time" id="best-time">&nbsp;</p>
+          <p class="best-why" id="best-why">&nbsp;</p>
+        </div>
+      </div>
+
+      <div class="grid-wrap" id="grid-wrap">
+        <div class="grid" id="grid" role="radiogroup" aria-label="Sports"></div>
+      </div>
+      <ul class="legend" aria-label="Legend">
+        <li><i class="c-g"></i> Go</li>
+        <li><i class="c-m"></i> Marginal</li>
+        <li><i class="c-n"></i> No-go</li>
+        <li><i class="c-d"></i> Dark</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= CHARTS ================= -->
+  <section id="charts" class="charts" aria-labelledby="charts-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The next 48 hours</p>
+        <h2 id="charts-title">Wind, heat <em>&amp; water.</em></h2>
+        <p class="sec-lede" id="charts-lede">Dashed lines are the selected sport&rsquo;s limits. Move across a chart to read any hour.</p>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head"><h3>Wind &amp; gusts</h3><p class="chart-key"><span class="k-wind">Wind</span> <span class="k-gust">Gusts</span> <span class="k-lim">Limits</span></p></div>
+        <svg class="chart" id="c-wind" role="img" aria-label="Wind and gust chart"></svg>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-head"><h3>Temperature</h3><p class="chart-key"><span class="k-temp">Air</span> <span class="k-feel">Feels like</span></p></div>
+          <svg class="chart" id="c-temp" role="img" aria-label="Temperature chart"></svg>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><h3>Rain chance</h3><p class="chart-key"><span class="k-pop">Probability</span></p></div>
+          <svg class="chart" id="c-pop" role="img" aria-label="Rain probability chart"></svg>
+        </div>
+      </div>
+      <p class="readout" id="readout" aria-live="polite">&nbsp;</p>
+    </div>
+  </section>
+
+  <!-- ================= WEEK ================= -->
+  <section id="week" class="week" aria-labelledby="week-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Seven days</p>
+        <h2 id="week-title">Plan the <em>week.</em></h2>
+      </div>
+      <ol class="days" id="days"></ol>
+    </div>
+  </section>
+
+  <!-- ================= LIGHT ================= -->
+  <section class="light" aria-labelledby="light-title">
+    <div class="wrap light-in">
+      <div class="sec-head">
+        <p class="eyebrow">Daylight</p>
+        <h2 id="light-title">Chase the <em>light.</em></h2>
+      </div>
+      <div class="sun" id="sun">
+        <svg viewBox="0 0 600 220" id="sun-arc" aria-hidden="true"></svg>
+        <dl class="sun-times">
+          <div><dt>First light</dt><dd id="sunrise">--</dd></div>
+          <div><dt>Golden hour</dt><dd id="golden">--</dd></div>
+          <div><dt>Last light</dt><dd id="sunset">--</dd></div>
+          <div><dt>Daylight</dt><dd id="daylen">--</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= METHOD ================= -->
+  <section id="method" class="method" aria-labelledby="method-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Method</p>
+        <h2 id="method-title">How an hour <em>gets its colour.</em></h2>
+        <p class="sec-lede">Each hour starts as go. Any marginal rule makes it marginal; any no-go rule makes it no-go. Night hours are marked dark. These are our rules of thumb, in °F and mph, written down so you can disagree with them.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="rules" id="rules">
+          <caption class="sr-only">Rules per sport</caption>
+          <thead><tr><th scope="col">Sport</th><th scope="col">No-go if</th><th scope="col">Marginal if</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <aside class="warn">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v5M12 18v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <p><strong>A forecast is not a clearance.</strong> Wind at 10&nbsp;m over a grid cell is not wind on your ridge, wave or pitch. Check local reports, avalanche and river bulletins, and the people who fly, paddle and climb there.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <a class="brand" href="index.html" aria-label="Outrider, home"><img src="favicon.svg" alt="" width="24" height="24"><span>OUTRIDER</span></a>
+    <p>Forecast and place search by <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> (CC BY 4.0). No accounts, no tracking; your last place is remembered on this device only.</p>
+    <p class="small">&copy; 2026 SolutionsAsService</p>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>
